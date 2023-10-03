@@ -1,0 +1,218 @@
+module cse460_project_group3(clk, a, b, c, opcode, zf, cf, sf);
+
+input [3:0]a, b;
+input [2:0]opcode;
+input clk;
+
+output reg [3:0]c;
+output reg sf, cf, zf;
+
+reg [1:0] carry_bit, borrow_bit;
+reg [2:0] temp;
+reg [3:0] bitcount = 3'b000;
+reg [3:0] b_comp;
+
+parameter op0=3'b000, //reset
+op1=3'b001, //xor
+op2=3'b010, //sub
+op3=3'b011, //nand
+op4=3'b100; //add
+
+always @(posedge clk)
+	begin
+		case (opcode)
+			op0: begin //reset
+				bitcount = 3'b000;
+				temp = 0;
+				carry_bit = 0;
+				borrow_bit = 0;
+			end
+			op1: begin //xor
+				if (bitcount == 3'b000)
+					begin
+					c = 4'b0000;
+					sf = 0;
+					cf = 0;
+					zf = 0;
+					c[0] = a[0] ^ b[0];
+					bitcount = 3'b001;
+					end
+				else if (bitcount == 3'b001)
+					begin
+					c[1] = a[1] ^ b[1];
+					bitcount = 3'b010;
+					end
+				else if (bitcount == 3'b010)
+					begin
+					c[2] = a[2] ^ b[2];
+					bitcount = 3'b011;
+					end
+				else if (bitcount == 3'b011)
+					begin
+					c[3] = a[3] ^ b[3];
+					bitcount = 3'b100;
+					if (c == 4'b0000)
+					zf = 1;
+					if (c[3] == 1)
+					sf = 1;
+					end
+			end
+			op2: begin //sub
+				b_comp = -b;
+				if (bitcount == 3'b000)
+					begin
+					c = 4'b0000;
+					sf = 0;
+					cf = 0;
+					zf = 0;
+					temp = a[0] + b_comp[0];
+					c[0] = temp[0];
+					carry_bit = temp[1];
+					if(a[0] == 0 && b[0] == 1)
+						begin
+						borrow_bit = 1;
+						end
+					bitcount = 3'b001;
+					end
+				else if (bitcount == 3'b001)
+					begin
+					temp = a[1] + b_comp[1] + carry_bit;
+					c[1] = temp[0];
+					carry_bit = temp[1];
+					if (borrow_bit == 1)
+						begin
+						if(a[0] == 1 && b[0] == 0)
+							begin
+							borrow_bit = 0;
+							end
+						end
+					else
+						begin
+						if(a[0] == 0 && b[0] == 1)
+							begin
+							borrow_bit = 1;
+							end
+						end
+						bitcount = 3'b010;
+					end
+				else if (bitcount == 3'b010)
+					begin
+					temp = a[2] + b_comp[2] + carry_bit;
+					c[2] = temp[0];
+					carry_bit = temp[1];
+					if (borrow_bit == 1)
+						begin
+						if(a[0] == 1 && b[0] == 0)
+							begin
+								borrow_bit = 0;
+							end
+						end
+					else
+						begin
+						if(a[0] == 0 && b[0] == 1)
+							begin
+							borrow_bit = 1;
+							end
+						end
+						bitcount = 3'b011;
+					end
+				else if (bitcount == 3'b011)
+					begin
+					temp = a[3] + b_comp[3] + carry_bit;
+					c[3] = temp[0];
+					carry_bit = temp[1];
+					if (borrow_bit == 1)
+						begin
+						if(a[0] == 1 && b[0] == 0)
+							begin
+							borrow_bit = 0;
+							end
+						end
+					else
+						begin
+						if(a[0] == 0 && b[0] == 1)
+							begin
+							borrow_bit = 1;
+							end
+						end
+						if (c == 4'b0000)
+							zf = 1;
+						if (borrow_bit == 1)
+							cf = 1;
+						if (c[3] == 1)
+							sf = 1;
+					end
+			end
+			op3: begin //nand
+				if (bitcount == 3'b000)
+					begin
+					c = 4'b0000;
+					sf = 0;
+					cf = 0;
+					zf = 0;
+					c[0] = ~(a[0] & b[0]);
+					bitcount = 3'b001;
+					end
+				else if (bitcount == 3'b001)
+					begin
+					c[1] = ~(a[1] & b[1]);
+					bitcount = 3'b010;
+					end
+				else if (bitcount == 3'b010)
+					begin
+					c[2] = ~(a[2] & b[2]);
+					bitcount = 3'b011;
+					end
+				else if (bitcount == 3'b011)
+					begin
+					c[3] = ~(a[3] & b[3]);
+					bitcount = 3'b100;
+					if (c == 4'b0000)
+						zf = 1;
+					if (c[3] == 1)
+						sf = 1;
+					end
+			end
+			op4: begin //add
+				if (bitcount == 3'b000)
+					begin
+					c = 4'b0000;
+					sf = 0;
+					cf = 0;
+					zf = 0;
+					temp = a[0] + b[0];
+					c[0] = temp[0];
+					carry_bit = temp[1];
+					bitcount = 3'b001;
+					end
+				else if (bitcount == 3'b001)
+					begin
+					temp = a[1] + b[1] + carry_bit;
+					c[1] = temp[0];
+					carry_bit = temp[1];
+					bitcount = 3'b010;
+					end
+				else if (bitcount == 3'b010)
+					begin
+					temp = a[2] + b[2] + carry_bit;
+					c[2] = temp[0];
+					carry_bit = temp[1];
+					bitcount = 3'b011;
+					end
+				else if (bitcount == 3'b011)
+					begin
+					temp = a[3] + b[3] + carry_bit;
+					c[3] = temp[0];
+					carry_bit = temp[1];
+					bitcount = 3'b100;
+					if (c == 4'b0000)
+						zf = 1;
+					if (carry_bit == 1)
+						cf = 1;
+					if (c[3] == 1)
+						sf = 1;
+					end
+			end
+		endcase
+	end
+endmodule
